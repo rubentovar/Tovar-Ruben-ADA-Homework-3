@@ -4,13 +4,11 @@ author: "Ruben Tovar"
 date: "5/10/2020"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ###########CHALLENGE 1 ################
-
-```
+```{r}
 library(tidyverse)
 
 library(curl)
@@ -24,12 +22,12 @@ data <- read.csv(read, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 head(data)
 ```
 ###Fit the regression model and, using {ggplot2}, produce a scatterplot with the fitted line superimposed upon the data. Append the the fitted model equation to your plot.
-```
+```{r}
 (plotlm <- ggplot(lm, aes(Brain_Size_Species_Mean, MaxLongevity_m)) + geom_point() + geom_smooth(method="lm", se=FALSE))
 (plotlog_lm <- ggplot(lm, aes(log(Brain_Size_Species_Mean), log(MaxLongevity_m))) + geom_point() + geom_smooth(method="lm", se=FALSE))
 ```
- ### Fit regression model
-```
+### Fit regression model
+```{r}
 lm <- lm(Brain_Size_Species_Mean ~ MaxLongevity_m, data)
 
 summary(lm)
@@ -43,7 +41,7 @@ loglm <-lm(log_BMASSFM ~ logMaxLongevity, data)
 summary(loglm)
 ```
 ###Identify and interpret the point estimate of the slope & outcome of the test associated with the hypotheses 
-```
+```{r}
 nanodata<-na.omit(data)
 
 bss<-nanodata$Brain_Size_Species_Mean
@@ -52,8 +50,8 @@ lgv<-nanodata$MaxLongevity_m
 
 (pointestimate_slope <- cor(bss, lgv) * (sd(lgv) / sd(bss)))
 ```
-###Also, find a 90% CI for the slope
-```
+###Find a 90% CI for the slope
+```{r}
 alpha <- 0.10
 
 (CI <- confint(lm, level = 1 - alpha))
@@ -61,19 +59,16 @@ alpha <- 0.10
 (CIlog <- confint(loglm, level = 1 - alpha))
 ```
 ###Using your model, add lines for the 90% confidence and prediction interval bands on the plot, and add a legend to differentiate between the lines.
-```
+```{r}
 library(broom)
 
 y.line <- predict(loglm, newdata = data.frame(logMaxLongevity = data$logMaxLongevity))
-
 df <- data.frame(cbind(data$logMaxLongevity, data$log_BMASSFM, y.line))
-
 names(df) <- c("x", "y", "yline")
-
 df <- augment(loglm)
 ```
 ###Intervals
-```
+```{r}
 df <- df %>%
   mutate(
     c.lwr = .fitted - qt(1 - alpha / 2, nrow(df) - 2) * .se.fit,
@@ -81,17 +76,17 @@ df <- df %>%
   )
 ```
 ###sd deviation
-```
+```{r}
 sd <- glance(loglm) %>% pull(sigma)
 ```
 ###CI Predicted values
-```
+```{r}
 df <- df %>%
-  mutate(
-    se.prediction = sqrt(sd^2 + .se.fit^2),
-    p.lwr = .fitted - qt(1 - alpha / 2, nrow(df) - 2) * se.prediction,
-    p.upr = .fitted + qt(1 - alpha / 2, nrow(df) - 2) * se.prediction
-  )
+mutate(
+se.prediction = sqrt(sd^2 + .se.fit^2),
+p.lwr = .fitted - qt(1 - alpha / 2, nrow(df) - 2) * se.prediction,
+p.upr = .fitted + qt(1 - alpha / 2, nrow(df) - 2) * se.prediction
+)
 head(df)
 
 g <- ggplot(data = data, aes(x = log_BMASSFM, y = logMaxLongevity))
@@ -105,15 +100,19 @@ g
 
 g2 <- ggplot(data = data, aes(x = log_BMASSFM, y = logMaxLongevity), alpha = 0.5) +
   geom_point(na.rm = TRUE) +
-  # add regression line
+```
+##add regression line
+```{r}
   geom_line(
     data = df, aes(x = log_BMASSFM, y = .fitted), color = "black",
     lwd = 1
   ) +
-  # add a ribbon layer
+```
+##add a ribbon layer
+```{r}
   geom_ribbon(
     data = df, aes(x = log_BMASSFM, ymin = c.lwr, ymax = c.upr, colour = "Confidence Interval"),
-    # ... with transparency set to 0.2
+    #with transparency set to 0.2
     alpha = 0.2,
     fill = "grey"
   ) +
@@ -126,7 +125,7 @@ g2 <- ggplot(data = data, aes(x = log_BMASSFM, y = logMaxLongevity), alpha = 0.5
 g2
 ```
 ###Produce a point estimate and associated 90% prediction interval for the longevity of a species whose brain weight is 750 gm.
-```
+```{r}
 (b750 <- 248.9523 + (1.2180 * 750))
 ```
 ###Do you trust the model to predict observations accurately for this value of the explanatory variable? Why or why not?
@@ -142,7 +141,7 @@ Log transformed helps with the noise of the variation.
 
 ###Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your  
 β coeffiecients (slope and intercept).
-```
+```{r}
 data <- data %>% 
   mutate(log_BMASSFM = log(Body_mass_female_mean),
   loghomie = (log(HomeRange_km2)))
@@ -152,25 +151,24 @@ HomieRangeLM <- lm(log_BMASSFM ~ loghomie, data)
 summary(HomieRangeLM)
 ```
 ###use bootstrapping to sample from the dataset 1000 times with replacement, each time fitting the same model and calculating the appropriate coefficients.
-```
+```{r}
 library(infer)
 
 set.seed(213)
-
 strapnboots <- data %>%
-  specify(log_BMASSFM ~ logHOMER) %>%
-  generate(reps = 1000, type = "bootstrap") %>%
-  calculate(stat = "slope")
+specify(log_BMASSFM ~ logHOMER) %>%
+generate(reps = 1000, type = "bootstrap") %>%
+calculate(stat = "slope")
 ```
 ###Histogram
-```
+```{r}
 hist(strapnboots$stat,
   main = "Histogram of Bootstrapped\nSlope Values",
   xlab = "Slope Coefficient"
 )
 ```
 ###Bootstrap
-```
+```{r}
 strapnboots <- data %>%
   specify(log_BMASSFM ~ logHOMER) %>%
   generate(reps = 1000, type = "bootstrap") 
@@ -187,20 +185,19 @@ for (i in 1:213) {
   }
 ```
 # store data
-```
+```{r}
 BR_Boot <- tibble(slope = slope, intercept = intercept)
 ```
 ###Plot a histogram of these sampling distributions for  
 β0 and  β1.
-```
+```{r}
 hist(BR_Boot$slope,
-  main = "Histogram of Slope Values",
-  xlab = "Slope")
+main = "Histogram of Slope Values",
+xlab = "Slope")
 
 hist(BR_Boot$intercept,
-  main = "Histogram of Intercept Values",
-  xlab = "Intercept")
-
+ main = "Histogram of Intercept Values",
+xlab = "Intercept")
 
 alpha <- 0.05
 
@@ -213,7 +210,6 @@ p_upper <- 1 - (alpha / 2)
 degrees_of_freedom <- nrow(BR_Boot) - 2
 
 critical_value <- qt(p_upper, df = degrees_of_freedom)
-
 
 ###B1
 
@@ -248,7 +244,7 @@ BRB_ErrorO
 *Both the intercept and slope changed for lm()
 
 ###How do you bootstrap CIs compare to those estimated mathematically as part of the lm() function?
-```
+```{r}
 alpha = 0.05
 
 (CI <- confint(HomieRangeLM, level = 1 - alpha))
@@ -259,13 +255,10 @@ loghomie    0.4243665 0.5883935
 
 *Both the orginal and bootstrap values are comparable.
 
-
-
 ################## Challenge 3 #####################
 
 ###Write your own function, called boot_lm(), that takes as its arguments a dataframe (d=), a linear model (model=, written as a character string, e.g., “logHR ~ logBM”), a user-defined confidence interval level (conf.level=, with default “0.95”), and a number of bootstrap replicates (reps=, with default “1000”).
-```
-
+```{r}
 boot_lm <- function(d, model, conf.level=0.95, reps=1000){
 d <- d %>% 
 mutate(log_HomeRange = log(HomeRange_km2),
@@ -276,8 +269,9 @@ log_MGS = log(MeanGroupSize))
 
 model <- as.formula(model)
 fit <- lm(model, data = d)
-
+```
 ##Boot strap
+```{r}
 strapnboots <- d %>%
 generate(reps = reps, type = "bootstrap") 
 slope <- vector()
@@ -289,8 +283,9 @@ Range_Bootlm <- lm(model, Range_Boot)
 slope[[i]] <- Range_Bootlm$coefficients[[2]]
 intercept[[i]] <- Range_Bootlm$coefficients[[1]]
 }
-
+```
 ##Vectors
+```{r}
 Range_Boot <- tibble(slope = slope, intercept = intercept)
 
 #Alpha, CI boundaries, and critical values
@@ -300,8 +295,9 @@ p_lower <- alpha / 2
 p_upper <- 1 - (alpha / 2)
 degrees_of_freedom <- nrow(Range_Boot) - 2
 critical_value <- qt(p_upper, df = degrees_of_freedom)
-
+```
 ##β1
+```{r}
 Range_Bootlm_ErrorA <- Range_Boot %>% 
 summarize(
 estimate = mean(slope),
@@ -313,8 +309,9 @@ boot.upper = quantile(slope, p_upper)
 )
 
 Range_Bootlm_ErrorA
-
+```
 ##β0
+```{r}
 Range_Bootlm_ErrorO <- Range_Boot %>% 
 summarize(
 estimate = mean(intercept),
@@ -326,25 +323,23 @@ boot.upper = quantile(slope, p_upper)
 )
 
 Range_Bootlm_ErrorO
-
-# combined 
+```
+# combined
+```{r}
 C <-rbind(Range_Bootlm_ErrorA,Range_Bootlm_ErrorO)
 C
 }
 ```
-
 ## log(HomeRange_km2) ~ log(Body_mass_female_mean)
-```
+```{r}
 boot_lm(d = data, model = "log_HomeRange ~ log_BMASSFM")
 ```
-
 ## log(DayLength_km) ~ log(Body_mass_female_mean)
-```
+```{r}
 boot_lm(d = data, model = "log_DayLength ~ log_BMASSFM")
 ```
-
 ## log(HomeRange_km2) ~ log(Body_mass_female_mean) + MeanGroupSize
-```
+```{r}
 boot_lm(d = data, model = "log_HomeRange ~ log_BMASSFM + log_MGS")
 ```
 
